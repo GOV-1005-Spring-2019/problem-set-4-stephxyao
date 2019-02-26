@@ -2,6 +2,7 @@ library(readr)
 library(tidyverse)
 library(gt)
 library(ggstance)
+library(lubridate)
 
 elections <- read_csv("ps_4_elections-poll-nc09-3.csv",
                       col_types = cols(
@@ -33,11 +34,12 @@ differing_gender <- elections %>%
   filter(gender != gender_combined) %>%
   summarize(differing_gender = n())
 
+# differing ethnicity
 differing_ethnicity <- elections %>%
   filter(race_eth == "White", file_race_black != "White") %>%
   summarize(differing_ethnicity = n())
 
-# first responses
+# first responses difference in minutes
 first_responses <- elections %>%
   group_by(response) %>%
   summarize(first_response = min(timestamp))
@@ -74,10 +76,9 @@ table <- elections %>%
 elections %>%
   select(educ, final_weight) %>%
   filter(educ != "[DO NOT READ] Refused") %>%
-  within(elections, stage <- factor(stage, levels = c("High school", "Grade school",
-                                                      "Some college or trade school", 
-                                                      "Bachelors' degree",
-                                                      "Graduate or Professional Degree"))) %>%
+  mutate(educ = fct_relevel(educ, "Grade school", "High school",
+                            "Some college or trade school", "Bachelors' degree",
+                            "Graduate or Professional Degree")) %>%
   ggplot(aes(x = final_weight, y = educ)) +
   geom_violinh(fill = 'white') +
   geom_jitter(alpha = 0.3) +
