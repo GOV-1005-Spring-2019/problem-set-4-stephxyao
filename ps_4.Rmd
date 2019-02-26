@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(tidyverse)
+library(gt)
 ```
 
 ```{r}
@@ -43,4 +44,19 @@ There were `r pull(dems)` respondents who supported the Democratic candidate.
 
 There were `r pull(reps)-pull(unds)` more respondents who favored the Republican candidate than who were Undecided.
 
-There are two gender variables `hello.`
+There are two gender variables (`gender` and `gender_combined`). There are `r ` individuals for whom these variables have different values.
+
+# Question 3
+```{r}
+elections %>%
+  select(educ, final_weight) %>%
+  filter(educ != "[DO NOT READ] Refused") %>%
+  ggplot(aes(x = final_weight, y = educ)) +
+  geom_violinh(fill = 'white') +
+  geom_jitter(alpha = 0.3) +
+  labs(title = "More Educated Matter Less in North Carolina 9th",
+       subtitle = "Poll gives more weight to people who are less likely to participate in polls",
+       caption = "New York Times Upshot/Siena College 2018 live polls") +
+  xlab("Weight Given to Respondent in Calculating Poll Results") +
+  ylab(NULL)
+```
