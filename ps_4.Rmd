@@ -13,7 +13,7 @@ library(gt)
 library(ggstance)
 ```
 
-```{r}
+```{r, include=FALSE}
 elections <- read_csv("ps_4_elections-poll-nc09-3.csv",
                       col_types = cols(
                         .default = col_character(),
@@ -69,7 +69,7 @@ There are `r differing_ethnicity` respondents listed as “White” under `race_
 The first `response` of Dem came `r round(first_rep - first_dem)` minutes (rounded to the nearest minute) before the first `response` of Rep.
 
 # Question 2
-```{r}
+```{r, echo=FALSE}
 elections %>%
   select(response, final_weight, race_eth) %>%
   group_by(race_eth, response) %>%
@@ -103,7 +103,7 @@ elections %>%
 ```
 
 # Question 3
-```{r}
+```{r, echo=FALSE}
 elections %>%
   select(educ, final_weight) %>%
   filter(educ != "[DO NOT READ] Refused") %>%
@@ -122,5 +122,20 @@ elections %>%
 
 # Question 4
 ```{r}
-
+elections %>%
+  select(ager, partyid) %>%
+  filter(ager != "[DO NOT READ] Refused", partyid != "[DO NOT READ] Refused") %>%
+  group_by(ager, partyid) %>%
+  summarize(total = n()) %>%
+  mutate(partyid = fct_relevel(partyid, "Democrat", "Republican", "Independent (No party)", "or as a member of another political party")) %>%
+  ggplot(aes(x = partyid, y = total, fill = partyid)) +
+  geom_col() +
+  facet_wrap(~ager) +
+  xlab("Party ID") +
+  ylab("Number of People") +
+  scale_x_discrete(label = c("Dem.", "Rep.", "Indep.", "Other")) +
+  theme(legend.position = "none") +
+  labs(title = "Party ID sorted by age group",
+       caption = "Source: New York Times Upshot/Siena College 2018 live polls")
+  
 ```
