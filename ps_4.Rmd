@@ -1,5 +1,5 @@
 ---
-title: "ps_4"
+title: "Problem Set #4"
 author: "Stephanie Yao"
 date: "February 25, 2019"
 output: html_document
@@ -13,7 +13,10 @@ library(gt)
 library(ggstance)
 ```
 
-```{r, include=FALSE}
+```{r madlibs, include=FALSE}
+# this reads in the data following the example from class. The lines of code
+# after the first line make sure to convert the columns into the correct data types
+# so it will be ready to use later on. 
 elections <- read_csv("ps_4_elections-poll-nc09-3.csv",
                       col_types = cols(
                         .default = col_character(),
@@ -25,34 +28,41 @@ elections <- read_csv("ps_4_elections-poll-nc09-3.csv",
                         timestamp = col_datetime(format = "")))
   
 # support of democratic candidate
+# this section gets the number of rows with "Dem" in the response column using the n() function in summarize after a filter. This representsthe number of people who said they supported the Democratic candidate. 
 dems <- elections %>%
   filter(response == "Dem") %>%
   summarize(dems = n())
 
 # support of republican candidate
+# this does the same thing using the same method as the section above, but with the Republican party.
 reps <- elections %>%
   filter(response == "Rep") %>%
   summarize(reps = n())
 
 # undecided
+# this does the same thing with the same method as the two sections above, but with people who said they were Undecided about which party's candidate to support.
 unds <- elections %>%
   filter(response == "Und") %>%
   summarize(unds = n())
 
 # number of people with different values for gender and gender_combined
+# this filters for the rows where the value in the "gender" column does not match the value in the "gender_combined" column, and counts the number of rows where this discrepancy occurs using n() in summarize.
 differing_gender <- elections %>%
   filter(gender != gender_combined) %>%
   summarize(differing_gender = n())
 
-differing_ethnicity <- elections %>%
+# this filters for the rows where the value for "race_eth" is "White", but the value for "file_race_black" is not "White," and counts the number of rows with this discrepancy using n() in summarize.
+differing_race <- elections %>%
   filter(race_eth == "White", file_race_black != "White") %>%
-  summarize(differing_ethnicity = n())
+  summarize(differing_race = n())
 
 # minutes of first responses of dem
+# this section uses slice to get the first row of the dataframe and then uses pull to pull out the value in the timestamp column of the first row. This timestamp is then assigned to the variable "first_dem" which represents the first response in the poll that indicated support for a Democratic candidate. I chose the first row because I saw that the rows in the dataframe were already sorted chronologically by timestamp so the earliest time would be the first row and the last response would be the last row, and the first row indicated support for the Democratic party in the response column as well, so I knew it had to be the first Democratic poll entry.
 first_dem <- elections %>%
   slice(1:1) %>%
   pull(timestamp)
 
+# this section uses slice and pull to do the same thing as the previous section but to find the timestamp of the first Republican response instead. I chose the fifth row because this row is the first row to have Republican in the response column.
 first_rep <- elections %>%
   slice(5:5) %>%
   pull(timestamp)
@@ -64,12 +74,13 @@ There were `r pull(reps)-pull(unds)` more respondents who favored the Republican
 
 There are two gender variables (`gender` and `gender_combined`). There are `r differing_gender` individuals for whom these variables have different values.
 
-There are `r differing_ethnicity` respondents listed as “White” under `race_eth` who are not listed as “White” under `file_race_black`.
+There are `r differing_race` respondents listed as “White” under `race_eth` who are not listed as “White” under `file_race_black`.
 
 The first `response` of Dem came `r round(first_rep - first_dem)` minutes (rounded to the nearest minute) before the first `response` of Rep.
 
 # Question 2
-```{r, echo=FALSE}
+```{r make_table, echo=FALSE}
+# this chunk of code makes the table for question 2 using the gt package. First, I selected the relevant columns required to replicate the table using select(). Then, I grouped by the variables we want to look at and compare, which are the race of the poll respondent (race_eth) and the party they indicated support for (response). I summarized and summed the final_weight into a variable called total because final_weight is the poll weight that was used to calculate the percentages in the reference chart, and summing them will total up the poll weight for each race group because we used group_by above. I filtered out responses with NA and race entries where the respondent refused to answer. I used spread to clean up and organize the data. Replace_na replaces values in the table with NA with zero instead. This is important because if we don't do this, the mutates we do later on will just result in NA if something contains a NA. I used mutate to create a variable called "all" which is the total number of poll respondents who we didn't filter out (the '3' group seems to be a third party). Then I used mutate to calculate the percentages for each party and store them in the variables "Dem", "Rep", and "Und". I use select to remove "total" and '3' from appearing in the table. Then I ungroup and use mutate and factor to reorder the race groups, and arrange by race. I create the actual table by calling gt and specifying the title and labels. I use fmt_percent to add percent signs to the values in the table, and I convert the 0 value back into NA so that I can use fmt_missing to format the NA with a dash. Finally, I add a caption with the source.
 elections %>%
   select(response, final_weight, race_eth) %>%
   group_by(race_eth, response) %>%
@@ -87,7 +98,6 @@ elections %>%
   mutate(race_eth = factor(race_eth, levels = c("White", "Black", "Hispanic", "Asian",
                                 "Other"))) %>%
   arrange(race_eth) %>%
-  
   gt() %>%
     tab_header(title = "Polling results from NC 9th Congressional District") %>%
     cols_label(
@@ -103,7 +113,8 @@ elections %>%
 ```
 
 # Question 3
-```{r, echo=FALSE}
+```{r make_violin, echo=FALSE}
+# This chunk makes the plot for question 3. I select the relevant variables, filter out rows where respondents didn't provide their education level, and use mutate and fct_relevel to reorder the appearance of the categories on the y-axis to match the reference plot. I call ggplot and use geom_violinh to create the plot. geom_violinh is from the ggstance package I imported in the "setup" chunk of code, it helps create the horizontal violin plots. I fill with white to color the violin shapes. geom_jitter adds the black data points on top of the violin shapes, and I change alpha to 0.3 so we can see the overlap, and decrease the height to vertically compress the spread of the points. Finally, I add the correct labels.
 elections %>%
   select(educ, final_weight) %>%
   filter(educ != "[DO NOT READ] Refused") %>%
@@ -112,7 +123,7 @@ elections %>%
                             "Graduate or Professional Degree")) %>%
   ggplot(aes(x = final_weight, y = educ)) +
   geom_violinh(fill = 'white') +
-  geom_jitter(alpha = 0.3, height = 0.1) +
+  geom_jitter(alpha = 0.3, height = 0.2) +
   labs(title = "More Educated Matter Less in North Carolina 9th",
        subtitle = "Poll gives more weight to people who are less likely to participate in polls",
        caption = "New York Times Upshot/Siena College 2018 live polls") +
@@ -121,7 +132,8 @@ elections %>%
 ```
 
 # Question 4
-```{r}
+```{r make_bar_graph, echo=FALSE}
+# I decided to make a plot showing the party identifications of the different age ranges. I thought it would be interesting to see which age ranges tended to support which party more, and thought faceting by age group would be a good way to display this data. I selected the relevant variables using select(), filtered out rows where people didn't provide the requested information, grouped by age range and party ID, and used summarize to count the total number of people per age range per party ID. I use mutate and fct_relevel to reorder the parties in the way that makes the most sense to me, then ggplot it. I fill by partyid in the aesthetics so we could tell the distinction between parties more easily. I then created the bar graph using geom_col(), facet wrapped by age range, added the correct labels in the correct order, and removed the legend. For the source, I used the same one as for question 3 since it came from the same source of data. I thought it was unnecessary to color the bars corresponding to their party colors because Independent and Other don't have their own colors.
 elections %>%
   select(ager, partyid) %>%
   filter(ager != "[DO NOT READ] Refused", partyid != "[DO NOT READ] Refused") %>%
@@ -135,7 +147,10 @@ elections %>%
   ylab("Number of People") +
   scale_x_discrete(label = c("Dem.", "Rep.", "Indep.", "Other")) +
   theme(legend.position = "none") +
-  labs(title = "Party ID sorted by age group",
+  labs(title = "Party Identification by Age Group",
        caption = "Source: New York Times Upshot/Siena College 2018 live polls")
   
 ```
+
+# Colleagues
+Neil Khurana, and I briefly consulted with various other students at office hours and study hall.
