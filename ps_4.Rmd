@@ -10,10 +10,19 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(tidyverse)
 library(gt)
+library(ggstance)
 ```
 
 ```{r}
-elections <- read_csv("ps_4_elections-poll-nc09-3.csv")
+elections <- read_csv("ps_4_elections-poll-nc09-3.csv",
+                      col_types = cols(
+                        .default = col_character(),
+                        turnout_scale = col_double(),
+                        turnout_score = col_double(),
+                        w_LV = col_double(),
+                        w_RV = col_double(),
+                        final_weight = col_double(),
+                        timestamp = col_datetime(format = "")))
   
 # support of democratic candidate
 dems <- elections %>%
@@ -38,25 +47,80 @@ differing_gender <- elections %>%
 differing_ethnicity <- elections %>%
   filter(race_eth == "White", file_race_black != "White") %>%
   summarize(differing_ethnicity = n())
+
+# minutes of first responses of dem
+first_dem <- elections %>%
+  slice(1:1) %>%
+  pull(timestamp)
+
+first_rep <- elections %>%
+  slice(5:5) %>%
+  pull(timestamp)
 ```
 # Question 1
 There were `r pull(dems)` respondents who supported the Democratic candidate.
 
 There were `r pull(reps)-pull(unds)` more respondents who favored the Republican candidate than who were Undecided.
 
-There are two gender variables (`gender` and `gender_combined`). There are `r ` individuals for whom these variables have different values.
+There are two gender variables (`gender` and `gender_combined`). There are `r differing_gender` individuals for whom these variables have different values.
+
+There are `r differing_ethnicity` respondents listed as “White” under `race_eth` who are not listed as “White” under `file_race_black`.
+
+The first `response` of Dem came `r round(first_rep - first_dem)` minutes (rounded to the nearest minute) before the first `response` of Rep.
+
+# Question 2
+```{r}
+elections %>%
+  select(response, final_weight, race_eth) %>%
+  group_by(race_eth, response) %>%
+  summarize(total = sum(final_weight)) %>%
+  filter(!is.na(response)) %>%
+  filter(race_eth != "[DO NOT READ] Don't know/Refused") %>%
+  spread(key = response, value = total) %>%
+  replace_na(list(Und = 0, `3` = 0)) %>%
+  mutate(all = Dem + Rep + Und + `3`) %>% 
+  mutate(Dem = Dem / all) %>% 
+  mutate(Rep = Rep / all) %>% 
+  mutate(Und = Und / all) %>%
+  select(-all, -`3`) %>% 
+  ungroup() %>%
+  mutate(race_eth = factor(race_eth, levels = c("White", "Black", "Hispanic", "Asian",
+                                "Other"))) %>%
+  arrange(race_eth) %>%
+  
+  gt() %>%
+    tab_header(title = "Polling results from NC 9th Congressional District") %>%
+    cols_label(
+      race_eth = "",
+      Dem = "DEM.",
+      Rep = "REP.",
+      Und = "UND."
+    ) %>%
+  fmt_percent(columns = vars(Dem, Rep, Und), decimals = 0) %>%
+  na_if(0) %>%
+  fmt_missing(columns = vars(Und), rows = 4) %>%
+  tab_source_note("Source: New York Times Upshot/Siena College 2018 live polls")
+```
 
 # Question 3
 ```{r}
 elections %>%
   select(educ, final_weight) %>%
   filter(educ != "[DO NOT READ] Refused") %>%
+  mutate(educ = fct_relevel(educ, "Grade school", "High school",
+                            "Some college or trade school", "Bachelors' degree",
+                            "Graduate or Professional Degree")) %>%
   ggplot(aes(x = final_weight, y = educ)) +
   geom_violinh(fill = 'white') +
-  geom_jitter(alpha = 0.3) +
+  geom_jitter(alpha = 0.3, height = 0.1) +
   labs(title = "More Educated Matter Less in North Carolina 9th",
        subtitle = "Poll gives more weight to people who are less likely to participate in polls",
        caption = "New York Times Upshot/Siena College 2018 live polls") +
   xlab("Weight Given to Respondent in Calculating Poll Results") +
   ylab(NULL)
+```
+
+# Question 4
+```{r}
+
 ```
